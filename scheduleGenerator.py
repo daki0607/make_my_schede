@@ -1,9 +1,9 @@
 import json
 from PIL import Image, ImageDraw
 
-columnWidth = 80
-dateCellHeight = 50
-cellHeight = 100
+columnWidth = 70
+dateCellHeight = 40
+cellHeight = 50
 
 
 class Schedule(object):
@@ -27,7 +27,11 @@ class Schedule(object):
         """
         Initializes a schedule for the provided days.
         """
-        self.canvas = Image.new("RGB", (len(days) * columnWidth, 400), (255, 255, 255))
+        self.canvas = Image.new(
+            "RGB",
+            (len(days) * columnWidth, cellHeight * self._get_max_daily_events(days)),
+            (255, 255, 255),
+        )
         self.draw = ImageDraw.Draw(self.canvas, "RGB")
         for i in range(len(days)):
             x, y = columnWidth * (0.5 + i), dateCellHeight / 2
@@ -36,11 +40,36 @@ class Schedule(object):
                 (x - txtWidth / 2, y - txtHeight / 2), days[i], fill=(255, 0, 0)
             )
 
+        for i in range(len(days) - 1):
+            self._verticalLine(columnWidth * (1 + i), (0, 0, 0))
+
+        self._horizontalLine(dateCellHeight, (0, 0, 0))
+
     def saveSchedule(self, filename=None):
+        """
+        Saves the schedule with the provided filename.
+        """
         if filename:
             self.canvas.save(filename, "PNG")
         else:
             self.canvas.save("outputSchedule.png", "PNG")
+
+    def _verticalLine(self, x, color):
+        self.draw.line([(x, 0), (x, self.canvas.height)], fill=color, width=2)
+
+    def _horizontalLine(self, y, color):
+        self.draw.line([(0, y), (self.canvas.width, y)], fill=color, width=2)
+
+    def _get_max_daily_events(self, days):
+        """
+        Return the number of events for the busiest day.
+        """
+        daily_events = []
+        for day in days:
+            daily_events.append(self.get_events_for_day(day))
+
+        number_of_daily_events = map(len, daily_events)
+        return max(number_of_daily_events)
 
 
 class Event(object):
