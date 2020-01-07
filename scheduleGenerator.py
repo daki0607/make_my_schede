@@ -2,7 +2,7 @@ import json
 from PIL import Image, ImageDraw
 
 columnWidth = 70
-dateCellHeight = 40
+dateCellHeight = 30
 cellHeight = 50
 
 
@@ -11,6 +11,8 @@ class Schedule(object):
         self.events = []
         for ev in data["events"]:
             self.events.append(Event(ev))
+
+        self.days = list(set(self.events))
 
     def get_events_for_day(self, day):
         """
@@ -23,24 +25,24 @@ class Schedule(object):
 
         return sorted(dayEvents, key=lambda x: x.startTime[0] * 60 + x.startTime[1])
 
-    def initializeSchedule(self, days):
+    def initializeSchedule(self):
         """
         Initializes a schedule for the provided days.
         """
         self.canvas = Image.new(
             "RGB",
-            (len(days) * columnWidth, cellHeight * self._get_max_daily_events(days)),
+            (len(self.days) * columnWidth, cellHeight * self._get_max_daily_events()),
             (255, 255, 255),
         )
         self.draw = ImageDraw.Draw(self.canvas, "RGB")
-        for i in range(len(days)):
+        for i in range(len(self.days)):
             x, y = columnWidth * (0.5 + i), dateCellHeight / 2
-            txtWidth, txtHeight = self.draw.textsize(days[i])
+            txtWidth, txtHeight = self.draw.textsize(self.days[i])
             self.draw.text(
-                (x - txtWidth / 2, y - txtHeight / 2), days[i], fill=(255, 0, 0)
+                (x - txtWidth / 2, y - txtHeight / 2), self.days[i], fill=(255, 0, 0)
             )
 
-        for i in range(len(days) - 1):
+        for i in range(len(self.days) - 1):
             self._verticalLine(columnWidth * (1 + i), (0, 0, 0))
 
         self._horizontalLine(dateCellHeight, (0, 0, 0))
@@ -60,16 +62,19 @@ class Schedule(object):
     def _horizontalLine(self, y, color):
         self.draw.line([(0, y), (self.canvas.width, y)], fill=color, width=2)
 
-    def _get_max_daily_events(self, days):
+    def _get_max_daily_events(self):
         """
         Return the number of events for the busiest day.
         """
         daily_events = []
-        for day in days:
+        for day in self.days:
             daily_events.append(self.get_events_for_day(day))
 
         number_of_daily_events = map(len, daily_events)
         return max(number_of_daily_events)
+
+    def _find_common_break(self):
+        pass
 
 
 class Event(object):
@@ -89,6 +94,12 @@ class Event(object):
     def __str__(self):
         return f"{self.course} {self.eventType} at {self.startTime[0]}:{self.startTime[1]} to {self.endTime[0]}:{self.endTime[1]} ({self.duration} minutes)."
 
+    def _printEvent(self, pos, color):
+        """
+        Prints the event in the position provided.
+            'pos' represents the top left corner.
+        """
+
 
 def to_hr_min(timeStr):
     hour, minute = timeStr.split(":")
@@ -98,6 +109,5 @@ def to_hr_min(timeStr):
 with open("schedule.json", "r") as F:
     mySchedule = Schedule(json.load(F))
 
-days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
-mySchedule.initializeSchedule(days)
+mySchedule.initializeSchedule()
 mySchedule.saveSchedule()
