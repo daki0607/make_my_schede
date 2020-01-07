@@ -4,6 +4,15 @@ from PIL import Image, ImageDraw
 columnWidth = 70
 dateCellHeight = 30
 cellHeight = 50
+dayOrdering = {
+    "Monday": 1,
+    "Tuesday": 2,
+    "Wednesday": 3,
+    "Thursday": 4,
+    "Friday": 5,
+    "Saturday": 6,
+    "Sunday": 7,
+}
 
 
 class Schedule(object):
@@ -12,7 +21,11 @@ class Schedule(object):
         for ev in data["events"]:
             self.events.append(Event(ev))
 
-        self.days = list(set(self.events))
+        self.days = set()
+        for ev in self.events:
+            for day in ev.days:
+                self.days.add(day)
+        self.days = sorted(self.days, key=lambda x: dayOrdering[x])
 
     def get_events_for_day(self, day):
         """
