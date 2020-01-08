@@ -1,9 +1,12 @@
 import json
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFont
 
-columnWidth = 70
-dateCellHeight = 30
-cellHeight = 50
+
+scale = 3
+gutterWidth = 30 * scale
+columnWidth = 70 * scale
+dateCellHeight = 30 * scale
+cellHeight = 50 * scale
 dayOrdering = {
     "Monday": 0,
     "Tuesday": 1,
@@ -13,6 +16,7 @@ dayOrdering = {
     "Saturday": 5,
     "Sunday": 6,
 }
+dayFont = ImageFont.truetype(font="Gelasio-Regular.ttf", size=scale * 11)
 
 
 class Schedule(object):
@@ -47,19 +51,26 @@ class Schedule(object):
         """
         self.canvas = Image.new(
             "RGB",
-            (len(self.days) * columnWidth, cellHeight * self._get_max_daily_events()),
+            (
+                gutterWidth + len(self.days) * columnWidth,
+                dateCellHeight + cellHeight * self._get_max_daily_events(),
+            ),
             (255, 255, 255),
         )
         self.draw = ImageDraw.Draw(self.canvas, "RGB")
+
         for i in range(len(self.days)):
-            x, y = columnWidth * (0.5 + i), dateCellHeight / 2
-            txtWidth, txtHeight = self.draw.textsize(self.days[i])
+            x, y = gutterWidth + columnWidth * (0.5 + i), dateCellHeight / 2
+            txtWidth, txtHeight = self.draw.textsize(self.days[i], font=dayFont)
             self.draw.text(
-                (x - txtWidth / 2, y - txtHeight / 2), self.days[i], fill=(255, 0, 0)
+                (x - txtWidth / 2, y - txtHeight / 2),
+                self.days[i],
+                fill=(255, 0, 0),
+                font=dayFont,
             )
 
-        for i in range(len(self.days) - 1):
-            self._verticalLine(columnWidth * (1 + i), (0, 0, 0))
+        for i in range(len(self.days)):
+            self._verticalLine(gutterWidth + columnWidth * (i), (0, 0, 0))
 
         self._horizontalLine(dateCellHeight, (0, 0, 0))
 
@@ -89,7 +100,7 @@ class Schedule(object):
         number_of_daily_events = map(len, daily_events)
         return max(number_of_daily_events)
 
-    def _print_event(self, eventStr, xPos, yPos, color):
+    def _draw_event(self, eventStr, xPos, yPos, color):
         x, y = xPos + columnWidth / 2, yPos + cellHeight / 2
         txtWidth, txtHeight = self.draw.multiline_textsize(eventStr)
         self.draw.multiline_text(
@@ -112,7 +123,10 @@ class Schedule(object):
 
             for d in ev.days:
                 eventX = self.days.index(d) * columnWidth
-                self._print_event(ev._get_formatted_event(), eventX, eventY, (0, 0, 0))
+                self._draw_event(ev._get_formatted_event(), eventX, eventY, (0, 0, 0))
+
+    def _group_events(self):
+        pass
 
     def _get_absolute_start_end_time(self):
         startTime = 25 * 60
@@ -189,3 +203,4 @@ with open("schedule.json", "r") as F:
 mySchedule.initializeSchedule()
 mySchedule.fill_schedule()
 mySchedule.saveSchedule()
+# mySchedule.print()
