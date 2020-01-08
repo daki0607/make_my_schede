@@ -20,6 +20,8 @@ class Schedule(object):
         self.events = []
         for ev in data["events"]:
             self.events.append(Event(ev))
+        # Sort events by time and day
+        self.events.sort(key=lambda x: (x.startTime.time, dayOrdering[x.days[0]]))
 
         self.days = set()
         for ev in self.events:
@@ -36,7 +38,8 @@ class Schedule(object):
             if day in ev.days:
                 dayEvents.append(ev)
 
-        return sorted(dayEvents, key=lambda x: x.startTime.to_absolute())
+        # No need to sort because events are already sorted by time, then day
+        return dayEvents
 
     def initializeSchedule(self):
         """
