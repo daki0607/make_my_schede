@@ -176,7 +176,6 @@ class Time(object):
 with open("schedule.json", "r") as F:
     mySchedule = Schedule(json.load(F))
 
-mySchedule.print()
 mySchedule.initializeSchedule()
 mySchedule.fill_schedule()
 mySchedule.saveSchedule()
