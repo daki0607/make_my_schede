@@ -111,7 +111,7 @@ class Schedule(object):
             startTime = min(ev.startTime.to_absolute(), startTime)
             endTime = max(ev.endTime.to_absolute(), endTime)
 
-        return (Time.from_absolute(startTime), Time.from_absolute(endTime))
+        return (startTime, endTime)
 
     def print(self):
         for ev in self.events:
