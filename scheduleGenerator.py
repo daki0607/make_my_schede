@@ -107,7 +107,7 @@ class Schedule(object):
         for ev in self.events:
             # Linearly interpolate y
             eventY = (maxY - minY) / (absEnd - absStart) * (
-                ev.startTime.to_absolute() - absStart
+                ev.startTime.time - absStart
             ) + minY
 
             for d in ev.days:
@@ -119,8 +119,8 @@ class Schedule(object):
         endTime = 0
 
         for ev in self.events:
-            startTime = min(ev.startTime.to_absolute(), startTime)
-            endTime = max(ev.endTime.to_absolute(), endTime)
+            startTime = min(ev.startTime.time, startTime)
+            endTime = max(ev.endTime.time, endTime)
 
         return (startTime, endTime)
 
