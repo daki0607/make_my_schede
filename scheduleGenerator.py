@@ -98,7 +98,8 @@ class Schedule(object):
         )
 
     def fill_schedule(self):
-        self.absStart, self.absEnd = self._get_absolute_start_end_time()
+        absStart, absEnd = self._get_absolute_start_end_time()
+        minY, maxY = dateCellHeight, self.canvas.height
 
         for ev in self.events:
             # Linearly interpolate y
