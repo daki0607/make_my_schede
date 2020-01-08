@@ -149,28 +149,31 @@ class Event(object):
 
 
 class Time(object):
-    def __init__(self, hour, minute):
-        self.hour = hour
-        self.minute = minute
+    """
+    Store time as the number of minutes since 12:00am.
+    """
+
+    def __init__(self, time):
+        self.time = time
 
     @classmethod
     def from_string(cls, timeStr):
         hour, minute = timeStr.split(":")
-        return cls(int(hour), int(minute))
+        return cls(int(hour) * 60 + int(minute))
 
     @classmethod
-    def from_absolute(cls, absoluteTime):
-        hour, minute = absoluteTime // 60, absoluteTime % 60
-        return cls(hour, minute)
+    def from_hour_minute(cls, hour, minute):
+        return cls(hour * 60 + minute)
 
-    def to_absolute(self):
-        return 60 * self.hour + self.minute
+    def to_hour_min(self):
+        return (self.time // 60, self.time % 60)
 
     def __add__(self, other):
-        return Time.from_absolute(self.to_absolute() + other.to_absolute())
+        return Time(self.time + other.time)
 
     def __str__(self):
-        return f"{self.hour}:{self.minute}"
+        hour, minute = self.to_hour_min()
+        return f"{hour}:{minute}"
 
 
 with open("schedule.json", "r") as F:
