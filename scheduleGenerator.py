@@ -36,7 +36,7 @@ class Schedule(object):
             if day in ev.days:
                 dayEvents.append(ev)
 
-        return sorted(dayEvents, key=lambda x: x.startTime[0] * 60 + x.startTime[1])
+        return sorted(dayEvents, key=lambda x: x.startTime.to_absolute())
 
     def initializeSchedule(self):
         """
@@ -86,8 +86,32 @@ class Schedule(object):
         number_of_daily_events = map(len, daily_events)
         return max(number_of_daily_events)
 
-    def _find_common_break(self):
-        pass
+    def _print_event(self, eventStr, xPos, yPos, color):
+        x, y = xPos + columnWidth / 2, yPos + cellHeight / 2
+        txtWidth, txtHeight = self.draw.multiline_textsize(eventStr)
+        self.draw.multiline_text(
+            (x - txtWidth / 2, y - txtHeight / 2),
+            eventStr,
+            fill=color,
+            align="center",
+            spacing=0,
+        )
+
+    def fill_schedule(self):
+        self.absStart, self.absEnd = self._get_absolute_start_end_time()
+
+        for ev in self.events:
+            self._print_event(ev._get_formatted_event(), 0, dateCellHeight, (0, 0, 0))
+
+    def _get_absolute_start_end_time(self):
+        startTime = 25 * 60
+        endTime = 0
+
+        for ev in self.events:
+            startTime = min(ev.startTime.to_absolute(), startTime)
+            endTime = max(ev.endTime.to_absolute(), endTime)
+
+        return (Time.from_absolute(startTime), Time.from_absolute(endTime))
 
 
 class Event(object):
@@ -95,32 +119,51 @@ class Event(object):
         self.course = data["course"]
         self.section = data["section"]
         self.eventType = data["type"]
-        self.startTime = to_hr_min(data["start"])
-        self.endTime = to_hr_min(data["end"])
+        self.startTime = Time.from_string(data["start"])
+        self.endTime = Time.from_string(data["end"])
         self.room = data["room"]
         self.days = data["days"]
 
-        self.duration = (60 * self.endTime[0] + self.endTime[1]) - (
-            60 * self.startTime[0] + self.startTime[1]
-        )
+        self.duration = self.endTime.to_absolute() - self.startTime.to_absolute()
 
     def __str__(self):
-        return f"{self.course} {self.eventType} at {self.startTime[0]}:{self.startTime[1]} to {self.endTime[0]}:{self.endTime[1]} ({self.duration} minutes)."
+        return f"{self.course} {self.eventType} at {self.startTime} to {self.endTime} ({self.duration} minutes)."
 
-    def _printEvent(self, pos, color):
+    def _get_formatted_event(self):
         """
-        Prints the event in the position provided.
-            'pos' represents the top left corner.
+        Return an event string in schedule format.
         """
+        return f"{self.course}\n{self.eventType}\n{self.room}"
 
 
-def to_hr_min(timeStr):
-    hour, minute = timeStr.split(":")
-    return [int(hour), int(minute)]
+class Time(object):
+    def __init__(self, hour, minute):
+        self.hour = hour
+        self.minute = minute
+
+    @classmethod
+    def from_string(cls, timeStr):
+        hour, minute = timeStr.split(":")
+        return cls(int(hour), int(minute))
+
+    @classmethod
+    def from_absolute(cls, absoluteTime):
+        hour, minute = absoluteTime // 60, absoluteTime % 60
+        return cls(hour, minute)
+
+    def to_absolute(self):
+        return 60 * self.hour + self.minute
+
+    def __add__(self, other):
+        return Time.from_absolute(self.to_absolute() + other.to_absolute())
+
+    def __str__(self):
+        return f"{self.hour}:{self.minute}"
 
 
 with open("schedule.json", "r") as F:
     mySchedule = Schedule(json.load(F))
 
 mySchedule.initializeSchedule()
+mySchedule.fill_schedule()
 mySchedule.saveSchedule()
