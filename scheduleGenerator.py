@@ -136,16 +136,20 @@ class Event(object):
         self.room = data["room"]
         self.days = data["days"]
 
-        self.duration = self.endTime.to_absolute() - self.startTime.to_absolute()
-
     def __str__(self):
-        return f"{self.course} {self.eventType} at {self.startTime} to {self.endTime} ({self.duration} minutes)."
+        return f"{self.course} {self.eventType} at {self.startTime} to {self.endTime} ({self.endTime.time - self.startTime.time} minutes)."
 
     def _get_formatted_event(self):
         """
         Return an event string in schedule format.
         """
         return f"{self.course}\n{self.eventType}\n{self.room}"
+
+    def is_during(self, T):
+        """
+        Return if time T is within the start and end times of the event.
+        """
+        return self.startTime.time < T.time and T.time > self.endTime.time
 
 
 class Time(object):
