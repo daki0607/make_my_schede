@@ -101,7 +101,14 @@ class Schedule(object):
         self.absStart, self.absEnd = self._get_absolute_start_end_time()
 
         for ev in self.events:
-            self._print_event(ev._get_formatted_event(), 0, dateCellHeight, (0, 0, 0))
+            # Linearly interpolate y
+            eventY = (maxY - minY) / (absEnd - absStart) * (
+                ev.startTime.to_absolute() - absStart
+            ) + minY
+
+            for d in ev.days:
+                eventX = self.days.index(d) * columnWidth
+                self._print_event(ev._get_formatted_event(), eventX, eventY, (0, 0, 0))
 
     def _get_absolute_start_end_time(self):
         startTime = 25 * 60
