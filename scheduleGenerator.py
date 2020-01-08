@@ -113,6 +113,10 @@ class Schedule(object):
 
         return (Time.from_absolute(startTime), Time.from_absolute(endTime))
 
+    def print(self):
+        for ev in self.events:
+            print(ev)
+
 
 class Event(object):
     def __init__(self, data):
@@ -164,6 +168,7 @@ class Time(object):
 with open("schedule.json", "r") as F:
     mySchedule = Schedule(json.load(F))
 
+mySchedule.print()
 mySchedule.initializeSchedule()
 mySchedule.fill_schedule()
 mySchedule.saveSchedule()
