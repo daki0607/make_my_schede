@@ -17,6 +17,7 @@ dayOrdering = {
     "Sunday": 6,
 }
 dayFont = ImageFont.truetype(font="Gelasio-Regular.ttf", size=scale * 11)
+cellFont = ImageFont.truetype(font="Gelasio-Regular.ttf", size=scale * 11)
 
 
 class Schedule(object):
@@ -100,15 +101,26 @@ class Schedule(object):
         number_of_daily_events = map(len, daily_events)
         return max(number_of_daily_events)
 
-    def _draw_event(self, eventStr, xPos, yPos, color):
-        x, y = xPos + columnWidth / 2, yPos + cellHeight / 2
-        txtWidth, txtHeight = self.draw.multiline_textsize(eventStr)
+    def _draw_event(self, eventStr, xPos, yPos, txtColor, lineColor):
+        """
+        (xPos, yPos) represents the center of the bounding box.
+        """
+        txtWidth, txtHeight = self.draw.multiline_textsize(eventStr, font=cellFont)
         self.draw.multiline_text(
-            (x - txtWidth / 2, y - txtHeight / 2),
+            (xPos - txtWidth / 2, yPos - txtHeight / 2),
             eventStr,
-            fill=color,
+            fill=txtColor,
             align="center",
             spacing=0,
+            font=cellFont,
+        )
+        self.draw.line(
+            [
+                (xPos - columnWidth / 2, yPos + txtHeight / 2),
+                (xPos + columnWidth / 2, yPos + txtHeight / 2),
+            ],
+            fill=lineColor,
+            width=2,
         )
 
     def fill_schedule(self):
@@ -122,11 +134,13 @@ class Schedule(object):
             ) + minY
 
             for d in ev.days:
-                eventX = self.days.index(d) * columnWidth
-                self._draw_event(ev._get_formatted_event(), eventX, eventY, (0, 0, 0))
+                eventX = gutterWidth + (self.days.index(d) + 0.5) * columnWidth
+                self._draw_event(
+                    ev._get_formatted_event(), eventX, eventY, (0, 0, 0), (0, 0, 255),
+                )
 
-    def _group_events(self):
-        pass
+    def group_events(self):
+        groups = []
 
     def _get_absolute_start_end_time(self):
         startTime = 25 * 60
@@ -160,7 +174,7 @@ class Event(object):
         """
         Return an event string in schedule format.
         """
-        return f"{self.course}\n{self.eventType}\n{self.room}"
+        return f"{self.course}\n{self.eventType.capitalize()}\n{self.room}"
 
     def is_during(self, T):
         """
