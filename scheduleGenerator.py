@@ -6,7 +6,7 @@ scale = 3
 gutterWidth = 30 * scale
 columnWidth = 70 * scale
 dateCellHeight = 30 * scale
-cellHeight = 50 * scale
+segmentHeight = 22 * scale
 dayOrdering = {
     "Monday": 0,
     "Tuesday": 1,
@@ -50,17 +50,19 @@ class Schedule(object):
         """
         Initializes a schedule for the provided days.
         """
+        # Create a canvas with width based on the number of days and height based on the segments in the busiest day
         self.canvas = Image.new(
             "RGB",
             (
                 gutterWidth + len(self.days) * columnWidth,
-                dateCellHeight + cellHeight * self._get_max_daily_events(),
+                dateCellHeight + segmentHeight * self._get_max_daily_segments(),
             ),
             (255, 255, 255),
         )
         self.draw = ImageDraw.Draw(self.canvas, "RGB")
 
         for i in range(len(self.days)):
+            # Set x and y of each day's text as the middle of the text box
             x, y = gutterWidth + columnWidth * (0.5 + i), dateCellHeight / 2
             txtWidth, txtHeight = self.draw.textsize(self.days[i], font=dayFont)
             self.draw.text(
@@ -70,9 +72,11 @@ class Schedule(object):
                 font=dayFont,
             )
 
+        # Draw vertical lines between the days
         for i in range(len(self.days)):
             self._verticalLine(gutterWidth + columnWidth * (i), (0, 0, 0))
 
+        # Draw a line underneath the days
         self._horizontalLine(dateCellHeight, (0, 0, 0))
 
     def saveSchedule(self, filename=None):
@@ -90,21 +94,19 @@ class Schedule(object):
     def _horizontalLine(self, y, color):
         self.draw.line([(0, y), (self.canvas.width, y)], fill=color, width=2)
 
-    def _get_max_daily_events(self):
+    def _get_max_daily_segments(self):
         """
-        Return the number of events for the busiest day.
+        Return the number of 30-minute segments for the busiest day.
         """
-        daily_events = []
-        for day in self.days:
-            daily_events.append(self.get_events_for_day(day))
+        start, end = self._get_absolute_start_end_time()
 
-        number_of_daily_events = map(len, daily_events)
-        return max(number_of_daily_events)
+        return (end - start) // 30 + 1
 
-    def _draw_event(self, eventStr, xPos, yPos, txtColor, lineColor):
+    def _draw_event(self, eventStr, pos, topBotY, txtColor, lineColor):
         """
-        (xPos, yPos) represents the center of the bounding box.
+        pos represents the center of the bounding box.
         """
+        xPos, yPos = pos
         txtWidth, txtHeight = self.draw.multiline_textsize(eventStr, font=cellFont)
         self.draw.multiline_text(
             (xPos - txtWidth / 2, yPos - txtHeight / 2),
@@ -116,8 +118,16 @@ class Schedule(object):
         )
         self.draw.line(
             [
-                (xPos - columnWidth / 2, yPos + txtHeight / 2),
-                (xPos + columnWidth / 2, yPos + txtHeight / 2),
+                (xPos - columnWidth / 2, topBotY[0] + 2),
+                (xPos + columnWidth / 2, topBotY[0] + 2),
+            ],
+            fill=lineColor,
+            width=2,
+        )
+        self.draw.line(
+            [
+                (xPos - columnWidth / 2, topBotY[1] - 2),
+                (xPos + columnWidth / 2, topBotY[1] - 2),
             ],
             fill=lineColor,
             width=2,
@@ -126,21 +136,22 @@ class Schedule(object):
     def fill_schedule(self):
         absStart, absEnd = self._get_absolute_start_end_time()
         minY, maxY = dateCellHeight, self.canvas.height
+        interpolationFactor = (maxY - minY) / (absEnd - absStart)
 
         for ev in self.events:
-            # Linearly interpolate y
-            eventY = (maxY - minY) / (absEnd - absStart) * (
-                ev.startTime.time - absStart
-            ) + minY
+            startEventY = interpolationFactor * (ev.startTime.time - absStart) + minY
+            endEventY = interpolationFactor * (ev.endTime.time - absStart) + minY
+            eventY = (startEventY + endEventY) / 2
 
             for d in ev.days:
                 eventX = gutterWidth + (self.days.index(d) + 0.5) * columnWidth
                 self._draw_event(
-                    ev._get_formatted_event(), eventX, eventY, (0, 0, 0), (0, 0, 255),
+                    ev._get_formatted_event(),
+                    (eventX, eventY),
+                    (startEventY, endEventY),
+                    (0, 0, 0),
+                    (0, 0, 255),
                 )
-
-    def group_events(self):
-        groups = []
 
     def _get_absolute_start_end_time(self):
         startTime = 25 * 60
