@@ -3,7 +3,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 
 scale = 3
-gutterWidth = 30 * scale
+gutterWidth = 23 * scale
 columnWidth = 70 * scale
 dateCellHeight = 30 * scale
 segmentHeight = 22 * scale
@@ -18,6 +18,7 @@ dayOrdering = {
 }
 dayFont = ImageFont.truetype(font="Gelasio-Regular.ttf", size=scale * 11)
 cellFont = ImageFont.truetype(font="Gelasio-Regular.ttf", size=scale * 11)
+timeFont = ImageFont.truetype(font="Gelasio-Regular.ttf", size=scale * 5)
 
 
 class Schedule(object):
@@ -74,10 +75,14 @@ class Schedule(object):
 
         # Draw vertical lines between the days
         for i in range(len(self.days)):
-            self._verticalLine(gutterWidth + columnWidth * (i), (0, 0, 0))
+            self._verticalLine(gutterWidth + columnWidth * (i), "black")
 
         # Draw a line underneath the days
-        self._horizontalLine(dateCellHeight, (0, 0, 0))
+        self.draw.line(
+            [(gutterWidth, dateCellHeight), (self.canvas.width, dateCellHeight)],
+            fill="black",
+            width=2,
+        )
 
     def saveSchedule(self, filename=None):
         """
@@ -90,9 +95,6 @@ class Schedule(object):
 
     def _verticalLine(self, x, color):
         self.draw.line([(x, 0), (x, self.canvas.height)], fill=color, width=2)
-
-    def _horizontalLine(self, y, color):
-        self.draw.line([(0, y), (self.canvas.width, y)], fill=color, width=2)
 
     def _get_max_daily_segments(self):
         """
@@ -107,6 +109,7 @@ class Schedule(object):
         pos represents the center of the bounding box.
         """
         xPos, yPos = pos
+        topY, botY = topBotY
         txtWidth, txtHeight = self.draw.multiline_textsize(eventStr, font=cellFont)
         self.draw.multiline_text(
             (xPos - txtWidth / 2, yPos - txtHeight / 2),
@@ -117,20 +120,23 @@ class Schedule(object):
             font=cellFont,
         )
         self.draw.line(
-            [
-                (xPos - columnWidth / 2, topBotY[0] + 2),
-                (xPos + columnWidth / 2, topBotY[0] + 2),
-            ],
+            [(xPos - columnWidth / 2, topY + 2), (xPos + columnWidth / 2, topY + 2),],
             fill=lineColor,
             width=2,
         )
         self.draw.line(
-            [
-                (xPos - columnWidth / 2, topBotY[1] - 2),
-                (xPos + columnWidth / 2, topBotY[1] - 2),
-            ],
+            [(xPos - columnWidth / 2, botY - 2), (xPos + columnWidth / 2, botY - 2),],
             fill=lineColor,
             width=2,
+        )
+
+    def _draw_time(self, timeStr, y, txtColor):
+        txtWidth, txtHeight = self.draw.textsize(timeStr, font=timeFont)
+        self.draw.text(
+            ((gutterWidth - 10 - txtWidth) / 2, y - txtHeight / 2),
+            timeStr,
+            fill=txtColor,
+            font=timeFont,
         )
 
     def fill_schedule(self):
@@ -152,6 +158,8 @@ class Schedule(object):
                     (0, 0, 0),
                     (0, 0, 255),
                 )
+                self._draw_time(str(ev.startTime), startEventY, "red")
+                self._draw_time(str(ev.endTime), endEventY, "red")
 
     def _get_absolute_start_end_time(self):
         startTime = 25 * 60
@@ -219,7 +227,7 @@ class Time(object):
 
     def __str__(self):
         hour, minute = self.to_hour_min()
-        return f"{hour}:{minute}"
+        return f"{hour}:{minute:02}"
 
 
 with open("schedule.json", "r") as F:
