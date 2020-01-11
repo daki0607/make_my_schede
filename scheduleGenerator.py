@@ -1,5 +1,6 @@
 import json
 from PIL import Image, ImageDraw, ImageFont
+from random import shuffle
 
 
 scale = 3
@@ -7,6 +8,7 @@ gutterWidth = 23 * scale
 columnWidth = 70 * scale
 dateCellHeight = 30 * scale
 segmentHeight = 22 * scale
+
 dayOrdering = {
     "Monday": 0,
     "Tuesday": 1,
@@ -16,6 +18,9 @@ dayOrdering = {
     "Saturday": 5,
     "Sunday": 6,
 }
+eventColors = ["red", "blue", "green", "yellow", "magenta", "cyan", "orange", "pink"]
+shuffle(eventColors)
+
 dayFont = ImageFont.truetype(font="Gelasio-Regular.ttf", size=scale * 11)
 cellFont = ImageFont.truetype(font="Gelasio-Regular.ttf", size=scale * 11)
 timeFont = ImageFont.truetype(font="Gelasio-Regular.ttf", size=scale * 5)
@@ -155,8 +160,8 @@ class Schedule(object):
                     ev._get_formatted_event(),
                     (eventX, eventY),
                     (startEventY, endEventY),
-                    (0, 0, 0),
-                    (0, 0, 255),
+                    "black",
+                    ev.color,
                 )
                 self._draw_time(str(ev.startTime), startEventY, "red")
                 self._draw_time(str(ev.endTime), endEventY, "red")
@@ -177,6 +182,8 @@ class Schedule(object):
 
 
 class Event(object):
+    colorPos = 0
+
     def __init__(self, data):
         self.course = data["course"]
         self.section = data["section"]
@@ -185,6 +192,9 @@ class Event(object):
         self.endTime = Time.from_string(data["end"])
         self.room = data["room"]
         self.days = data["days"]
+
+        self.color = eventColors[Event.colorPos]
+        Event.colorPos += 1
 
     def __str__(self):
         return f"{self.course} {self.eventType} at {self.startTime} to {self.endTime} ({self.endTime.time - self.startTime.time} minutes)."
