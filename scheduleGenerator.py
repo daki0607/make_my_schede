@@ -4,10 +4,11 @@ from random import shuffle
 
 
 scale = 3
-gutterWidth = 23 * scale
+gutterWidth = 27 * scale
 columnWidth = 70 * scale
 dateCellHeight = 30 * scale
 segmentHeight = 22 * scale
+bottomBuffer = 10 * scale
 
 dayOrdering = {
     "Monday": 0,
@@ -23,7 +24,7 @@ shuffle(eventColors)
 
 dayFont = ImageFont.truetype(font="Gelasio-Regular.ttf", size=scale * 11)
 cellFont = ImageFont.truetype(font="Gelasio-Regular.ttf", size=scale * 11)
-timeFont = ImageFont.truetype(font="Gelasio-Regular.ttf", size=scale * 5)
+timeFont = ImageFont.truetype(font="Gelasio-Regular.ttf", size=scale * 6)
 
 
 class Schedule(object):
@@ -61,9 +62,11 @@ class Schedule(object):
             "RGB",
             (
                 gutterWidth + len(self.days) * columnWidth,
-                dateCellHeight + segmentHeight * self._get_max_daily_segments(),
+                dateCellHeight
+                + segmentHeight * self._get_max_daily_segments()
+                + bottomBuffer,
             ),
-            (255, 255, 255),
+            "white",
         )
         self.draw = ImageDraw.Draw(self.canvas, "RGB")
 
@@ -77,10 +80,6 @@ class Schedule(object):
                 fill=(255, 0, 0),
                 font=dayFont,
             )
-
-        # Draw vertical lines between the days
-        for i in range(len(self.days)):
-            self._verticalLine(gutterWidth + columnWidth * (i), "black")
 
         # Draw a line underneath the days
         self.draw.line(
@@ -142,11 +141,13 @@ class Schedule(object):
             timeStr,
             fill=txtColor,
             font=timeFont,
+            stroke_fill="lightgray",
+            stroke_width=1,
         )
 
     def fill_schedule(self):
         absStart, absEnd = self._get_absolute_start_end_time()
-        minY, maxY = dateCellHeight, self.canvas.height
+        minY, maxY = dateCellHeight, self.canvas.height - bottomBuffer
         interpolationFactor = (maxY - minY) / (absEnd - absStart)
 
         for ev in self.events:
@@ -163,8 +164,12 @@ class Schedule(object):
                     "black",
                     ev.color,
                 )
-                self._draw_time(str(ev.startTime), startEventY, "red")
-                self._draw_time(str(ev.endTime), endEventY, "red")
+                self._draw_time(str(ev.startTime), startEventY, ev.color)
+                self._draw_time(str(ev.endTime), endEventY, ev.color)
+
+        # Draw vertical lines between the days
+        for i in range(len(self.days)):
+            self._verticalLine(gutterWidth + columnWidth * (i), "black")
 
     def _get_absolute_start_end_time(self):
         startTime = 25 * 60
@@ -232,11 +237,16 @@ class Time(object):
     def to_hour_min(self):
         return (self.time // 60, self.time % 60)
 
+    def to_12_hour(self):
+        h, m = self.to_hour_min()
+        h = h - 12 if h > 12 else h
+        return (h, m)
+
     def __add__(self, other):
         return Time(self.time + other.time)
 
     def __str__(self):
-        hour, minute = self.to_hour_min()
+        hour, minute = self.to_12_hour()
         return f"{hour}:{minute:02}"
 
 
