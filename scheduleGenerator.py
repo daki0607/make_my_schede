@@ -41,6 +41,16 @@ class Schedule(object):
                 self.days.add(day)
         self.days = sorted(self.days, key=lambda x: dayOrdering[x])
 
+        start, end = self._get_absolute_start_end_time()
+        start = (start // 30) * 30
+        end = (end // 30 + 1) * 30
+        self.allTimes = [Time(time) for time in range(start, end, 30)]
+
+        for ev in self.events:
+            self.allTimes = [
+                x for x in self.allTimes if not x.is_between(ev.startTime, ev.endTime)
+            ]
+
     def get_events_for_day(self, day):
         """
         Return all events for the specified day, sorted by time.
@@ -248,6 +258,16 @@ class Time(object):
     def __str__(self):
         hour, minute = self.to_12_hour()
         return f"{hour}:{minute:02}"
+
+    def __repr__(self):
+        hour, minute = self.to_12_hour()
+        return f"{hour}:{minute:02}"
+
+    def is_between(self, t1, t2):
+        """
+        Return True if the absolute time is between t1 (inclusive) and t2.
+        """
+        return t1.time <= self.time and self.time < t2.time
 
 
 with open("schedule.json", "r") as F:
