@@ -176,12 +176,6 @@ class Event(object):
         """
         return f"{self.course}\n{self.eventType.capitalize()}\n{self.room}"
 
-    def is_during(self, T):
-        """
-        Return if time T is within the start and end times of the event.
-        """
-        return self.startTime.time < T.time and T.time > self.endTime.time
-
 
 class Time(object):
     """
@@ -241,5 +235,5 @@ mySchedule.initializeSchedule()
 mySchedule.fill_schedule()
 mySchedule.saveSchedule()
 # mySchedule.print()
-# for T in mySchedule.scheduledTimes:
-#     print(T)
+for T in mySchedule.scheduledTimes:
+    print(T)
