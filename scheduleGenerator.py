@@ -42,26 +42,17 @@ class Schedule(object):
         self.days = sorted(self.days, key=lambda x: dayOrdering[x])
 
         start, end = self._get_absolute_start_end_time()
-        start = (start // 30) * 30
-        end = (end // 30 + 1) * 30
-        self.allTimes = [Time(time) for time in range(start, end, 30)]
+        start = (start.time // 30) * 30
+        end = (end.time // 30 + 1) * 30
+        allTimes = [Time(time) for time in range(start, end, 30)]
+        self.scheduledTimes = allTimes
 
         for ev in self.events:
-            self.allTimes = [
-                x for x in self.allTimes if not x.is_between(ev.startTime, ev.endTime)
+            allTimes = [
+                T for T in allTimes if not T.is_between(ev.startTime, ev.endTime)
             ]
 
-    def get_events_for_day(self, day):
-        """
-        Return all events for the specified day, sorted by time.
-        """
-        dayEvents = []
-        for ev in self.events:
-            if day in ev.days:
-                dayEvents.append(ev)
-
-        # No need to sort because events are already sorted by time, then day
-        return dayEvents
+        self.scheduledTimes = [T for T in self.scheduledTimes if T not in allTimes]
 
     def initializeSchedule(self):
         """
@@ -73,7 +64,7 @@ class Schedule(object):
             (
                 gutterWidth + len(self.days) * columnWidth,
                 dateCellHeight
-                + segmentHeight * self._get_max_daily_segments()
+                + segmentHeight * len(self.scheduledTimes)
                 + bottomBuffer,
             ),
             "white",
@@ -110,17 +101,9 @@ class Schedule(object):
     def _verticalLine(self, x, color):
         self.draw.line([(x, 0), (x, self.canvas.height)], fill=color, width=2)
 
-    def _get_max_daily_segments(self):
-        """
-        Return the number of 30-minute segments for the busiest day.
-        """
-        start, end = self._get_absolute_start_end_time()
-
-        return (end - start) // 30 + 1
-
     def _draw_event(self, eventStr, pos, topBotY, txtColor, lineColor):
         """
-        pos represents the center of the bounding box.
+        'pos' represents the center of the bounding box.
         """
         xPos, yPos = pos
         topY, botY = topBotY
@@ -156,44 +139,17 @@ class Schedule(object):
         )
 
     def fill_schedule(self):
-        absStart, absEnd = self._get_absolute_start_end_time()
-        minY, maxY = dateCellHeight, self.canvas.height - bottomBuffer
-        interpolationFactor = (maxY - minY) / (absEnd - absStart)
-
-        for ev in self.events:
-            startEventY = interpolationFactor * (ev.startTime.time - absStart) + minY
-            endEventY = interpolationFactor * (ev.endTime.time - absStart) + minY
-            eventY = (startEventY + endEventY) / 2
-
-            for d in ev.days:
-                eventX = gutterWidth + (self.days.index(d) + 0.5) * columnWidth
-                self._draw_event(
-                    ev._get_formatted_event(),
-                    (eventX, eventY),
-                    (startEventY, endEventY),
-                    "black",
-                    ev.color,
-                )
-                self._draw_time(str(ev.startTime), startEventY, ev.color)
-                self._draw_time(str(ev.endTime), endEventY, ev.color)
+        pass
 
         # Draw vertical lines between the days
         for i in range(len(self.days)):
             self._verticalLine(gutterWidth + columnWidth * (i), "black")
 
     def _get_absolute_start_end_time(self):
-        startTime = 25 * 60
-        endTime = 0
-
-        for ev in self.events:
-            startTime = min(ev.startTime.time, startTime)
-            endTime = max(ev.endTime.time, endTime)
+        startTime = min([ev.startTime for ev in self.events])
+        endTime = max([ev.endTime for ev in self.events])
 
         return (startTime, endTime)
-
-    def print(self):
-        for ev in self.events:
-            print(ev)
 
 
 class Event(object):
@@ -237,37 +193,45 @@ class Time(object):
 
     @classmethod
     def from_string(cls, timeStr):
+        """
+        Builds a Time object from the format "hh:mm".
+        """
         hour, minute = timeStr.split(":")
         return cls(int(hour) * 60 + int(minute))
 
-    @classmethod
-    def from_hour_minute(cls, hour, minute):
-        return cls(hour * 60 + minute)
-
     def to_hour_min(self):
+        """
+        Converts a Time object to the format (hh, mm).
+        """
         return (self.time // 60, self.time % 60)
 
     def to_12_hour(self):
+        """
+        Converts a Time object to the format (hh, mm) while honoring 12-hour 
+        time.
+        """
         h, m = self.to_hour_min()
         h = h - 12 if h > 12 else h
         return (h, m)
-
-    def __add__(self, other):
-        return Time(self.time + other.time)
 
     def __str__(self):
         hour, minute = self.to_12_hour()
         return f"{hour}:{minute:02}"
 
-    def __repr__(self):
-        hour, minute = self.to_12_hour()
-        return f"{hour}:{minute:02}"
+    def __eq__(self, other):
+        return self.time == other.time
 
-    def is_between(self, t1, t2):
+    def __gt__(self, other):
+        return self.time > other.time
+
+    def __lt__(self, other):
+        return self.time < other.time
+
+    def is_between(self, time1, time2):
         """
-        Return True if the absolute time is between t1 (inclusive) and t2.
+        Return True if the absolute time is between time1 (inclusive) and time2.
         """
-        return t1.time <= self.time and self.time < t2.time
+        return time1.time <= self.time and self.time < time2.time
 
 
 with open("schedule.json", "r") as F:
@@ -277,3 +241,5 @@ mySchedule.initializeSchedule()
 mySchedule.fill_schedule()
 mySchedule.saveSchedule()
 # mySchedule.print()
+# for T in mySchedule.scheduledTimes:
+#     print(T)
