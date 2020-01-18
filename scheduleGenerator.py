@@ -19,7 +19,8 @@ dayOrdering = {
     "Saturday": 5,
     "Sunday": 6,
 }
-eventColors = ["red", "blue", "green", "yellow", "magenta", "cyan", "orange", "pink"]
+eventColors = ["red", "blue", "green", "yellow",
+               "magenta", "cyan", "orange", "pink"]
 shuffle(eventColors)
 
 dayFont = ImageFont.truetype(font="Gelasio-Regular.ttf", size=scale * 11)
@@ -33,7 +34,8 @@ class Schedule(object):
         for ev in data["events"]:
             self.events.append(Event(ev))
         # Sort events by time and day
-        self.events.sort(key=lambda x: (x.startTime.time, dayOrdering[x.days[0]]))
+        self.events.sort(key=lambda x: (
+            x.startTime.time, dayOrdering[x.days[0]]))
 
         self.days = set()
         for ev in self.events:
@@ -43,7 +45,7 @@ class Schedule(object):
 
         start, end = self._get_absolute_start_end_time()
         start = (start.time // 30) * 30
-        end = (end.time // 30 + 1) * 30
+        end = (end.time // 30 + 2) * 30
         allTimes = [Time(time) for time in range(start, end, 30)]
         self.scheduledTimes = allTimes
 
@@ -52,7 +54,8 @@ class Schedule(object):
                 T for T in allTimes if not T.is_between(ev.startTime, ev.endTime)
             ]
 
-        self.scheduledTimes = [T for T in self.scheduledTimes if T not in allTimes]
+        self.scheduledTimes = [
+            T for T in self.scheduledTimes if T not in allTimes]
 
     def initializeSchedule(self):
         """
@@ -63,9 +66,8 @@ class Schedule(object):
             "RGB",
             (
                 gutterWidth + len(self.days) * columnWidth,
-                dateCellHeight
-                + segmentHeight * len(self.scheduledTimes)
-                + bottomBuffer,
+                dateCellHeight + bottomBuffer +
+                segmentHeight * len(self.scheduledTimes),
             ),
             "white",
         )
@@ -74,7 +76,8 @@ class Schedule(object):
         for i in range(len(self.days)):
             # Set x and y of each day's text as the middle of the text box
             x, y = gutterWidth + columnWidth * (0.5 + i), dateCellHeight / 2
-            txtWidth, txtHeight = self.draw.textsize(self.days[i], font=dayFont)
+            txtWidth, txtHeight = self.draw.textsize(
+                self.days[i], font=dayFont)
             self.draw.text(
                 (x - txtWidth / 2, y - txtHeight / 2),
                 self.days[i],
@@ -101,31 +104,46 @@ class Schedule(object):
     def _verticalLine(self, x, color):
         self.draw.line([(x, 0), (x, self.canvas.height)], fill=color, width=2)
 
-    def _draw_event(self, eventStr, pos, topBotY, txtColor, lineColor):
+    def _draw_event(self, ev, pos, txtColor="black"):
         """
-        'pos' represents the center of the bounding box.
+        'pos' represents the top-center of the bounding box.
         """
-        xPos, yPos = pos
-        topY, botY = topBotY
-        txtWidth, txtHeight = self.draw.multiline_textsize(eventStr, font=cellFont)
+        eventStr = ev._get_formatted_event()
+        x, y = pos
+        lineColor = ev.color
+        txtWidth, txtHeight = self.draw.multiline_textsize(
+            eventStr, font=cellFont)
+
         self.draw.multiline_text(
-            (xPos - txtWidth / 2, yPos - txtHeight / 2),
+            (x - txtWidth / 2, y),
             eventStr,
             fill=txtColor,
             align="center",
             spacing=0,
             font=cellFont,
         )
-        self.draw.line(
-            [(xPos - columnWidth / 2, topY + 2), (xPos + columnWidth / 2, topY + 2),],
-            fill=lineColor,
-            width=2,
-        )
-        self.draw.line(
-            [(xPos - columnWidth / 2, botY - 2), (xPos + columnWidth / 2, botY - 2),],
-            fill=lineColor,
-            width=2,
-        )
+        # self.draw.line(
+        #     [
+        #         (
+        #             x - columnWidth / 2,
+        #             self._get_y_pos(ev.startTime) - txtHeight / 2 + 2,
+        #         ),
+        #         (
+        #             x + columnWidth / 2,
+        #             self._get_y_pos(ev.startTime) - txtHeight / 2 + 2,
+        #         ),
+        #     ],
+        #     fill=lineColor,
+        #     width=2,
+        # )
+        # self.draw.line(
+        #     [
+        #         (x - columnWidth / 2, self._get_y_pos(ev.endTime) + txtHeight / 2 - 2),
+        #         (x + columnWidth / 2, self._get_y_pos(ev.endTime) + txtHeight / 2 - 2),
+        #     ],
+        #     fill=lineColor,
+        #     width=2,
+        # )
 
     def _draw_time(self, timeStr, y, txtColor):
         txtWidth, txtHeight = self.draw.textsize(timeStr, font=timeFont)
@@ -138,8 +156,38 @@ class Schedule(object):
             stroke_width=1,
         )
 
+    def _get_y_pos(self, eventTime):
+        y = dateCellHeight
+        i = 0
+        while eventTime > self.scheduledTimes[i]:
+            y += segmentHeight
+            i += 1
+
+        # # i is now the index of the scheduled time > time
+        upperTime = self.scheduledTimes[i].time
+        # # and i-1 is the index of the scheduled time < time
+        lowerTime = self.scheduledTimes[i - 1].time
+        # # Linearly interpolate between bounds
+        # y += segmentHeight / (upperTime - lowerTime) * (eventTime.time - lowerTime)
+
+        return y
+
     def fill_schedule(self):
-        pass
+        for ev in self.events:
+            for day in ev.days:
+                x = gutterWidth + columnWidth * (self.days.index(day) + 1 / 2)
+                y = self._get_y_pos(ev.startTime)
+                # Draw the event
+                #  Get the event's position
+                self._draw_event(ev, (x, y))
+                # Draw the time
+                pass
+
+        for i in range(len(self.scheduledTimes)):
+            self._draw_time(
+                str(self.scheduledTimes[i]), dateCellHeight +
+                i * segmentHeight, "red"
+            )
 
         # Draw vertical lines between the days
         for i in range(len(self.days)):
@@ -212,6 +260,10 @@ class Time(object):
         hour, minute = self.to_12_hour()
         return f"{hour}:{minute:02}"
 
+    def __repr__(self):
+        hour, minute = self.to_12_hour()
+        return f"Time object {{{hour}:{minute:02}}}"
+
     def __eq__(self, other):
         return self.time == other.time
 
@@ -223,9 +275,9 @@ class Time(object):
 
     def is_between(self, time1, time2):
         """
-        Return True if the absolute time is between time1 (inclusive) and time2.
+        Return True if the absolute time is between time1 and time2, inclusive.
         """
-        return time1.time <= self.time and self.time < time2.time
+        return time1.time <= self.time and self.time <= time2.time
 
 
 with open("schedule.json", "r") as F:
@@ -235,5 +287,5 @@ mySchedule.initializeSchedule()
 mySchedule.fill_schedule()
 mySchedule.saveSchedule()
 # mySchedule.print()
-for T in mySchedule.scheduledTimes:
-    print(T)
+# for T in mySchedule.scheduledTimes:
+#     print(T)
