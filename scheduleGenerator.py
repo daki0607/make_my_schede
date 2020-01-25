@@ -19,12 +19,11 @@ dayOrdering = {
     "Saturday": 5,
     "Sunday": 6,
 }
-eventColors = ["red", "blue", "green", "yellow",
-               "magenta", "cyan", "orange", "pink"]
+eventColors = ["red", "blue", "green", "magenta", "cyan", "orange", "pink"]
 shuffle(eventColors)
 
 dayFont = ImageFont.truetype(font="Gelasio-Regular.ttf", size=scale * 11)
-cellFont = ImageFont.truetype(font="Gelasio-Regular.ttf", size=scale * 11)
+cellFont = ImageFont.truetype(font="Gelasio-Regular.ttf", size=scale * 9)
 timeFont = ImageFont.truetype(font="Gelasio-Regular.ttf", size=scale * 6)
 
 
@@ -138,12 +137,16 @@ class Schedule(object):
         )
 
     def _get_y_pos(self, eventTime):
-        y = dateCellHeight
-        for i in range(len(self.scheduledTimes)):
-            if eventTime > self.scheduledTimes[i]:
+        i = 0
+        while self.scheduledTimes[i].time <= eventTime.time:
+            i += 1
+
+            if (i > len(self.scheduledTimes)):
                 break
 
-        y += segmentHeight * i
+        i -= 1
+
+        y = dateCellHeight + segmentHeight * i
 
         # The preceding time, rounded to 30 minutes
         timeSegmentBefore = (eventTime.time // 30) * 30
@@ -157,7 +160,9 @@ class Schedule(object):
             for day in ev.days:
                 x = gutterWidth + columnWidth * (self.days.index(day) + 0.5)
                 startY = self._get_y_pos(ev.startTime)
-                endY = self._get_y_pos(ev.endTime)
+                endY = startY + segmentHeight * \
+                    ((ev.endTime.time - ev.startTime.time) // 30) + \
+                    ((ev.endTime.time - ev.startTime.time) % 30)
                 # Draw the event
                 #  Get the event's position
                 self._draw_event(ev, (x, (startY + endY) / 2))
@@ -173,12 +178,6 @@ class Schedule(object):
                     [(x-columnWidth/2, endY),
                         (x+columnWidth/2, endY)],
                     fill="red", width=2)
-
-        for i in range(len(self.scheduledTimes)):
-            self._draw_time(
-                str(self.scheduledTimes[i]), dateCellHeight +
-                i * segmentHeight, "red"
-            )
 
         # Draw vertical lines between the days
         for i in range(len(self.days)):
@@ -231,7 +230,7 @@ class Time(object):
         """
         Builds a Time object from the format "hh: mm".
         """
-        hour, minute = timeStr.split(": ")
+        hour, minute = timeStr.split(":")
         return cls(int(hour) * 60 + int(minute))
 
     def to_hour_min(self):
