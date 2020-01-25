@@ -86,14 +86,6 @@ class Schedule(object):
                 font=dayFont,
             )
 
-        # Draw a line underneath the days
-        self.draw.line(
-            [(gutterWidth, dateCellHeight),
-                (self.canvas.width, dateCellHeight)],
-            fill="black",
-            width=2,
-        )
-
     def saveSchedule(self, filename=None):
         """
         Saves the schedule with the provided filename.
@@ -128,13 +120,55 @@ class Schedule(object):
     def _draw_time(self, timeStr, y, txtColor):
         txtWidth, txtHeight = self.draw.textsize(timeStr, font=timeFont)
         self.draw.text(
-            ((gutterWidth - 10 - txtWidth) / 2, y - txtHeight / 2),
+            ((gutterWidth - 10 - txtWidth)/2, y - txtHeight/2),
             timeStr,
             fill=txtColor,
             font=timeFont,
             stroke_fill="lightgray",
             stroke_width=1,
         )
+        self.draw.line([((gutterWidth + txtWidth)/2, y),
+                        (gutterWidth - 5, y)],
+                       fill=txtColor, width=2)
+
+    def _draw_superellipse(self, boundingBox, color):
+        (x0, y0), (x1, y1) = boundingBox
+        cx = (x0 + x1)/2
+        cy = (y0 + y1)/2
+
+        # Top left
+        self.draw.pieslice([(x0, y0), (cx, cy)],
+                           180, 270, fill=color)
+        # Top right
+        self.draw.pieslice([(cx, y0), (x1, cy)],
+                           270, 360, fill=color)
+        # Bottom left
+        self.draw.pieslice([(x0, cy), (cx, y1)],
+                           90, 180, fill=color)
+        # Bottom right
+        self.draw.pieslice([(cx, cy), (x1, y1)],
+                           0, 90, fill=color)
+
+        # Top rectangle
+        self.draw.rectangle([((x0 + cx)/2, y0),
+                             ((x1 + cx)/2, (y0 + cy)/2)],
+                            fill=color)
+        # Left rectangle
+        self.draw.rectangle([(x0, (y0 + cy)/2),
+                             ((x0 + cx)/2, (y1 + cy)/2)],
+                            fill=color)
+        # Right rectangle
+        self.draw.rectangle([((x1 + cx)/2, (y0 + cy)/2),
+                             (x1, (y1 + cy)/2)],
+                            fill=color)
+        # Bottom rectangle
+        self.draw.rectangle([((x0 + cx)/2, (y1 + cy)/2),
+                             ((x1 + cx)/2, y1)],
+                            fill=color)
+        # Center rectangle
+        self.draw.rectangle([((x0 + cx)/2, (y0 + cy)/2),
+                             ((x1 + cx)/2, (y1 + cy)/2)],
+                            fill=color)
 
     def _get_y_pos(self, eventTime):
         i = 0
@@ -160,28 +194,29 @@ class Schedule(object):
             for day in ev.days:
                 x = gutterWidth + columnWidth * (self.days.index(day) + 0.5)
                 startY = self._get_y_pos(ev.startTime)
-                endY = startY + segmentHeight * \
-                    ((ev.endTime.time - ev.startTime.time) // 30) + \
-                    ((ev.endTime.time - ev.startTime.time) % 30)
+                endY = (startY
+                        + segmentHeight
+                        * ((ev.endTime.time - ev.startTime.time) // 30)
+                        + ((ev.endTime.time - ev.startTime.time) % 30))
                 # Draw the event
                 #  Get the event's position
+                self._draw_superellipse([(x - columnWidth/2, startY),
+                                         (x + columnWidth/2, endY)],
+                                        ev.color)
                 self._draw_event(ev, (x, (startY + endY) / 2))
                 # Draw the time
                 self._draw_time(str(ev.startTime), startY, ev.color)
                 self._draw_time(str(ev.endTime), endY, ev.color)
 
-                self.draw.line(
-                    [(x-columnWidth/2, startY),
-                        (x+columnWidth/2, startY)],
-                    fill="blue", width=2)
-                self.draw.line(
-                    [(x-columnWidth/2, endY),
-                        (x+columnWidth/2, endY)],
-                    fill="red", width=2)
-
         # Draw vertical lines between the days
         for i in range(len(self.days)):
-            self._verticalLine(gutterWidth + columnWidth * (i), "black")
+            self._verticalLine(gutterWidth + columnWidth * (i), "gray")
+
+        # Draw a line underneath the days
+        self.draw.line([(gutterWidth, dateCellHeight),
+                        (self.canvas.width, dateCellHeight)],
+                       fill="gray", width=2,
+                       )
 
     def _get_absolute_start_end_time(self):
         startTime = min([ev.startTime for ev in self.events])
@@ -207,8 +242,8 @@ class Event(object):
 
     def __str__(self):
         return f"""{self.course} {self.eventType} at {self.startTime} to \
-            {self.endTime} ({self.endTime.time - self.startTime.time} \
-            minutes)."""
+                {self.endTime} ({self.endTime.time - self.startTime.time} \
+                minutes)."""
 
     def _get_formatted_event(self):
         """
