@@ -51,7 +51,8 @@ class Schedule(object):
 
         for ev in self.events:
             allTimes = [
-                T for T in allTimes if not T.is_between(ev.startTime, ev.endTime)
+                T for T in allTimes if not T.is_between(
+                    ev.startTime, ev.endTime)
             ]
 
         self.scheduledTimes = [
@@ -61,7 +62,8 @@ class Schedule(object):
         """
         Initializes a schedule for the provided days.
         """
-        # Create a canvas with width based on the number of days and height based on the segments in the busiest day
+        # Create a canvas with width based on the number of days and height #
+        #  based on the segments in the busiest day
         self.canvas = Image.new(
             "RGB",
             (
@@ -87,7 +89,8 @@ class Schedule(object):
 
         # Draw a line underneath the days
         self.draw.line(
-            [(gutterWidth, dateCellHeight), (self.canvas.width, dateCellHeight)],
+            [(gutterWidth, dateCellHeight),
+                (self.canvas.width, dateCellHeight)],
             fill="black",
             width=2,
         )
@@ -106,7 +109,7 @@ class Schedule(object):
 
     def _draw_event(self, ev, pos, txtColor="black"):
         """
-        'pos' represents the top-center of the bounding box.
+        'pos' represents the center of the bounding box.
         """
         eventStr = ev._get_formatted_event()
         x, y = pos
@@ -115,35 +118,13 @@ class Schedule(object):
             eventStr, font=cellFont)
 
         self.draw.multiline_text(
-            (x - txtWidth / 2, y),
+            (x - txtWidth / 2, y - txtHeight / 2),
             eventStr,
             fill=txtColor,
             align="center",
             spacing=0,
             font=cellFont,
         )
-        # self.draw.line(
-        #     [
-        #         (
-        #             x - columnWidth / 2,
-        #             self._get_y_pos(ev.startTime) - txtHeight / 2 + 2,
-        #         ),
-        #         (
-        #             x + columnWidth / 2,
-        #             self._get_y_pos(ev.startTime) - txtHeight / 2 + 2,
-        #         ),
-        #     ],
-        #     fill=lineColor,
-        #     width=2,
-        # )
-        # self.draw.line(
-        #     [
-        #         (x - columnWidth / 2, self._get_y_pos(ev.endTime) + txtHeight / 2 - 2),
-        #         (x + columnWidth / 2, self._get_y_pos(ev.endTime) + txtHeight / 2 - 2),
-        #     ],
-        #     fill=lineColor,
-        #     width=2,
-        # )
 
     def _draw_time(self, timeStr, y, txtColor):
         txtWidth, txtHeight = self.draw.textsize(timeStr, font=timeFont)
@@ -158,30 +139,40 @@ class Schedule(object):
 
     def _get_y_pos(self, eventTime):
         y = dateCellHeight
-        i = 0
-        while eventTime > self.scheduledTimes[i]:
-            y += segmentHeight
-            i += 1
+        for i in range(len(self.scheduledTimes)):
+            if eventTime > self.scheduledTimes[i]:
+                break
 
-        # # i is now the index of the scheduled time > time
-        upperTime = self.scheduledTimes[i].time
-        # # and i-1 is the index of the scheduled time < time
-        lowerTime = self.scheduledTimes[i - 1].time
-        # # Linearly interpolate between bounds
-        # y += segmentHeight / (upperTime - lowerTime) * (eventTime.time - lowerTime)
+        y += segmentHeight * i
+
+        # The preceding time, rounded to 30 minutes
+        timeSegmentBefore = (eventTime.time // 30) * 30
+        # Linearly interpolate to find exact y position
+        y += segmentHeight / 30 * (eventTime.time - timeSegmentBefore)
 
         return y
 
     def fill_schedule(self):
         for ev in self.events:
             for day in ev.days:
-                x = gutterWidth + columnWidth * (self.days.index(day) + 1 / 2)
-                y = self._get_y_pos(ev.startTime)
+                x = gutterWidth + columnWidth * (self.days.index(day) + 0.5)
+                startY = self._get_y_pos(ev.startTime)
+                endY = self._get_y_pos(ev.endTime)
                 # Draw the event
                 #  Get the event's position
-                self._draw_event(ev, (x, y))
+                self._draw_event(ev, (x, (startY + endY) / 2))
                 # Draw the time
-                pass
+                self._draw_time(str(ev.startTime), startY, ev.color)
+                self._draw_time(str(ev.endTime), endY, ev.color)
+
+                self.draw.line(
+                    [(x-columnWidth/2, startY),
+                        (x+columnWidth/2, startY)],
+                    fill="blue", width=2)
+                self.draw.line(
+                    [(x-columnWidth/2, endY),
+                        (x+columnWidth/2, endY)],
+                    fill="red", width=2)
 
         for i in range(len(self.scheduledTimes)):
             self._draw_time(
@@ -216,7 +207,9 @@ class Event(object):
         Event.colorPos += 1
 
     def __str__(self):
-        return f"{self.course} {self.eventType} at {self.startTime} to {self.endTime} ({self.endTime.time - self.startTime.time} minutes)."
+        return f"""{self.course} {self.eventType} at {self.startTime} to \
+            {self.endTime} ({self.endTime.time - self.startTime.time} \
+            minutes)."""
 
     def _get_formatted_event(self):
         """
@@ -227,7 +220,7 @@ class Event(object):
 
 class Time(object):
     """
-    Store time as the number of minutes since 12:00am.
+    Store time as the number of minutes since 12: 00am.
     """
 
     def __init__(self, time):
@@ -236,20 +229,20 @@ class Time(object):
     @classmethod
     def from_string(cls, timeStr):
         """
-        Builds a Time object from the format "hh:mm".
+        Builds a Time object from the format "hh: mm".
         """
-        hour, minute = timeStr.split(":")
+        hour, minute = timeStr.split(": ")
         return cls(int(hour) * 60 + int(minute))
 
     def to_hour_min(self):
         """
-        Converts a Time object to the format (hh, mm).
+        Converts a Time object to the format(hh, mm).
         """
         return (self.time // 60, self.time % 60)
 
     def to_12_hour(self):
         """
-        Converts a Time object to the format (hh, mm) while honoring 12-hour 
+        Converts a Time object to the format(hh, mm) while honoring 12-hour
         time.
         """
         h, m = self.to_hour_min()
@@ -282,6 +275,7 @@ class Time(object):
 
 with open("schedule.json", "r") as F:
     mySchedule = Schedule(json.load(F))
+
 
 mySchedule.initializeSchedule()
 mySchedule.fill_schedule()
